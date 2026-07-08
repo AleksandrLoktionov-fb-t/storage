@@ -23,6 +23,7 @@
     "editor.wrappingIndent": "same",
     "editor.wordWrapColumn": 100,
 
+    "explorer.autoReveal": false,
     "explorer.confirmDragAndDrop": false,
     "explorer.confirmDelete": false,
     "files.autoSave": "afterDelay",
