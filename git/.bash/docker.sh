@@ -26,23 +26,23 @@ dggo() {
     docker stop "$1" && docker rm "$1" && echo wp
 }
 
-# Запускает docker compose up --build -d на основе приоритета файлов в текущей папке
+# Запускает docker compose up --build -d --remove-orphans на основе приоритета файлов
 dcu() {
     local compose_file=""
 
-    # Ищем файлы в порядке приоритета для локальной разработки
-    if [ -f "docker-compose.local.yml" ]; then
-        compose_file="docker-compose.local.yml"
-    elif [ -f "docker-compose.debug.yml" ]; then
-        compose_file="docker-compose.debug.yml"
-    elif [ -f "docker-compose.yml" ]; then
-        compose_file="docker-compose.yml"
+    # Ищем файлы в порядке приоритета для локальной разработки (учитывая .yml и .yaml)
+    if [ -f "docker-compose.local.yml" ]; then compose_file="docker-compose.local.yml"
+    elif [ -f "docker-compose.local.yaml" ]; then compose_file="docker-compose.local.yaml"
+    elif [ -f "docker-compose.debug.yml" ]; then compose_file="docker-compose.debug.yml"
+    elif [ -f "docker-compose.debug.yaml" ]; then compose_file="docker-compose.debug.yaml"
+    elif [ -f "docker-compose.yml" ]; then compose_file="docker-compose.yml"
+    elif [ -f "docker-compose.yaml" ]; then compose_file="docker-compose.yaml"
     fi
 
     # Если нашли файл — запускаем, если нет — ругаемся
     if [ -n "$compose_file" ]; then
         echo "--> Найдено: $compose_file"
-        docker compose -f "$compose_file" up --build -d
+        docker compose -f "$compose_file" up --build -d --remove-orphans "$@"
     else
         echo "Ошибка: В текущей папке не найден ни один docker-compose файл."
         return 1
