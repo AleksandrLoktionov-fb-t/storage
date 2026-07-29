@@ -26,25 +26,37 @@ dggo() {
     docker stop "$1" && docker rm "$1" && echo wp
 }
 
-# Запускает docker compose up --build -d на основе приоритета файлов в текущей папке
+# Запускает docker compose up --build -d --remove-orphans на основе приоритета файлов
 dcu() {
     local compose_file=""
+    local files=(
+        "docker-compose.local.yml" "docker-compose.local.yaml"
+        "docker-compose.debug.yml" "docker-compose.debug.yaml"
+        "docker-compose.yml"       "docker-compose.yaml"
+    )
 
-    # Ищем файлы в порядке приоритета для локальной разработки
-    if [ -f "docker-compose.local.yml" ]; then
-        compose_file="docker-compose.local.yml"
-    elif [ -f "docker-compose.debug.yml" ]; then
-        compose_file="docker-compose.debug.yml"
-    elif [ -f "docker-compose.yml" ]; then
-        compose_file="docker-compose.yml"
-    fi
+    for file in "${files[@]}"; do
+        if [[ -f "$file" ]]; then
+            compose_file="$file"
+            break
+        fi
+    done
 
-    # Если нашли файл — запускаем, если нет — ругаемся
-    if [ -n "$compose_file" ]; then
+    if [[ -n "$compose_file" ]]; then
         echo "--> Найдено: $compose_file"
-        docker compose -f "$compose_file" up --build -d
+
+        local args=(-f "$compose_file")
+
+        # Если пользователь НЕ передал свои аргументы ($# == 0),
+        # автоматически докидываем профиль для запуска всех сервисов
+        if [[ $# -eq 0 ]]; then
+            args+=(--profile "*")
+        fi
+
+        # Выполняем один чистый запуск
+        docker compose "${args[@]}" up --build -d --remove-orphans "$@"
     else
-        echo "Ошибка: В текущей папке не найден ни один docker-compose файл."
+        echo "Ошибка: В текущей папке не найден ни один docker-compose файл." >&2
         return 1
     fi
 }

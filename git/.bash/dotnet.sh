@@ -1,5 +1,26 @@
 #!/usr/bin/env bash
 
+# Восстановление зависимостей без кэша с автовыбором проекта/решения
+dnrn() {
+    if [ $# -gt 0 ]; then
+        # Если вы вручную передали файл: dnrn MyProject.csproj
+        dotnet restore --no-cache "$@"
+    else
+        # Ищем сначала .sln, если нет — то первый попавшийся .csproj
+        local target
+        target=$(find . -maxdepth 1 -name "*.sln" | head -n 1)
+        [ -z "$target" ] && target=$(find . -maxdepth 1 -name "*.csproj" | head -n 1)
+
+        if [ -n "$target" ]; then
+            echo "--> Восстановление для: $target"
+            dotnet restore --no-cache "$target"
+        else
+            # Если файлов нет, пусть упадет со стандартной ошибкой .NET
+            dotnet restore --no-cache
+        fi
+    fi
+}
+
 # Ищет точное совпадение пакета NuGet и возвращает только последнюю версию
 # Использование: dnps <ИмяПакеты> [-p|--prerelease]
 dnps() {
@@ -22,3 +43,4 @@ dnps() {
     # Ищем пакет, парсим версии, сортируем и берем последнюю
     dotnet package search --exact-match $extra_flag "$1" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?' | sort -V | tail -n 1
 }
+
