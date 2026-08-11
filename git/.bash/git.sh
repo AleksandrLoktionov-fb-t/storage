@@ -36,5 +36,50 @@ gccl() {
         return 1
     fi
     
-    git commit -m "$*" -m "Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
+    git commit -m "$*" -m "Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
+}
+
+gm() {
+    local remote="$1"
+    local main_branch=""
+
+    # 1. Если аргумент пустой, предлагаем дефолтный origin через интерактивный промпт
+    if [ -z "$remote" ]; then
+        # Флаг -n1 считывает ровно 1 символ, -r отключает экранирование backslash
+        read -n 1 -r -p "Ремоут не указан. Использовать 'origin' по умолчанию? [Y/n] " response
+        echo "" # Перенос строки после нажатия клавиши
+        
+        # Если нажали Enter (пустой ответ) или Y/y — выставляем origin
+        if [ -z "$response" ] || [[ "$response" =~ ^[Yy]$ ]]; then
+            remote="origin"
+        else
+            echo "Отменено. Укажите имя ремоута явно. Пример: gm base"
+            return 1
+        fi
+    fi
+
+    # 2. Надежная проверка веток (независимая от регистра букв в Windows)
+    if git branch -r | grep -qi "^  $remote/main$"; then
+        main_branch="main"
+    elif git branch -r | grep -qi "^  $remote/master$"; then
+        main_branch="master"
+    else
+        echo "Ошибка: В ремоуте '$remote' не найдены ветки main или master."
+        echo "Доступные ветки этого ремоута:"
+        git branch -r | grep "^  $remote/"
+        return 1
+    fi
+
+    # 3. Получение текущей локальной ветки
+    local current_branch=$(git branch --show-current)
+
+    # 4. Защита от слияния ветки самой в себя
+    if [ "${current_branch,,}" = "${main_branch,,}" ]; then
+        echo "Вы уже находитесь на главной ветке ($main_branch). Слияние отменено."
+        return 1
+    fi
+
+    # 5. Выполнение слияния
+    echo "Merging $remote/$main_branch into '$current_branch'..."
+    git merge "$remote/$main_branch"
 }
